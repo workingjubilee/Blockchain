@@ -1,7 +1,8 @@
 import hashlib
 import requests
-
+import os
 import sys
+from uuid import uuid4
 
 
 def proof_of_work(last_proof):
@@ -40,6 +41,18 @@ if __name__ == '__main__':
 
     coins_mined = 0
     # Run forever until interrupted
+    try:
+        id_store = open('my_id', mode='r')
+        my_id = id_store.read()
+
+        id_store.close()
+    except OSError:
+        my_id = str(uuid4()).replace('-', '')
+        new_id = open('my_id', mode='x')
+
+        new_id.write(my_id)
+        new_id.close()
+
     while True:
         # Get the last proof from the server
         r = requests.get(url=node + "/last_proof")
