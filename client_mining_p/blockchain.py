@@ -93,9 +93,9 @@ class Blockchain(object):
     def last_block(self):
         return self.chain[-1]
 
+    @property
     def last_proof(self):
-        last = self.last_block()
-        return last.proof
+        return self.last_block['proof']
         # return last_proof
 
     @staticmethod
@@ -106,6 +106,7 @@ class Blockchain(object):
         """
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
+        print(last_proof, proof, guess, guess_hash)
         return guess_hash[:6] == "000000"
 
     def valid_chain(self, chain):
@@ -148,14 +149,17 @@ node_identifier = str(uuid4()).replace('-', '')
 blockchain = Blockchain()
 
 
-@app.route('/mine', methods=['GET'])
-def mine(proof):
+@app.route('/mine', methods=['POST'])
+def mine():
     # We run the proof of work algorithm to get the next proof...
-    last_block = blockchain.last_block
-    last_proof = last_block['proof']
-    if blockchain.valid_proof(proof, last_proof):
-    # We must receive a reward for finding the proof.
-    # The sender is "0" to signify that this node has mine a new coin
+    values = request.get_json()
+    attempt_proof = values['proof']
+    last_proof = blockchain.last_proof
+    print(last_proof, attempt_proof)
+    print(blockchain.valid_proof(last_proof, attempt_proof))
+    if blockchain.valid_proof(last_proof, attempt_proof):
+    # We must print a reward for finding the proof.
+    # The sender is "0" to signify that the node has mined a new coin
         blockchain.new_transaction(
             sender="0",
             recipient=node_identifier,
@@ -163,8 +167,9 @@ def mine(proof):
         )
 
     # Forge the new Block by adding it to the chain
+        last_block = blockchain.last_block
         previous_hash = blockchain.hash(last_block)
-        block = blockchain.new_block(proof, previous_hash)
+        block = blockchain.new_block(attempt_proof, previous_hash)
 
         response = {
             'message': "New Block Forged",
@@ -176,19 +181,19 @@ def mine(proof):
         return jsonify(response), 200
     else:
         response = {
-            'message': 'Nah bud this ain\'t it, try hashing with this:'
+            'message': "Nah bud this ain't it, try hashing with this:",
             'last_proof': last_proof
         }
 
         return jsonify(response), 403
 
 @app.route('/last_proof', methods=['GET'])
-def reply_with_proof(proof):
-    last_proof = blockchain.last_proof()
+def reply_with_proof():
+    last_proof = blockchain.last_proof
     response = {
         'last_proof': last_proof
     }
-    
+
     return jsonify(response), 200
 
 
